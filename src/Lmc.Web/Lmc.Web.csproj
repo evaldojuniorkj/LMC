@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <EmbeddedResource Include="Queries/*.sql" />
+    <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
+    <Content Remove="App_Data/**" />
+    <None Remove="App_Data/**" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+  </ItemGroup>
+</Project>

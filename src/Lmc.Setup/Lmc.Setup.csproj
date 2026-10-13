@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest><AssemblyName>Instalar-LMC</AssemblyName>
+    <Version>1.0.0</Version><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <PublishSingleFile>true</PublishSingleFile><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile><DebugType>None</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.12" />
+    <EmbeddedResource Include="$(PayloadPath)" LogicalName="Lmc.Setup.payload.zip" Condition="'$(PayloadPath)' != ''" />
+  </ItemGroup>
+</Project>

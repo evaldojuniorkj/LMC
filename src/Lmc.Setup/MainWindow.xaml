@@ -1,0 +1,90 @@
+<Window x:Class="Lmc.Setup.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Instalador LMC" Width="1040" Height="790" MinWidth="860" MinHeight="620" WindowStartupLocation="CenterScreen" Background="#F4F7F4" Foreground="{StaticResource Ink}" FontFamily="Segoe UI" FontSize="14" Loaded="WindowLoaded" Closing="WindowClosing">
+ <Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Border Background="#143E30" Padding="25,32">
+   <DockPanel LastChildFill="True">
+    <StackPanel DockPanel.Dock="Top"><TextBlock Text="LMC" FontSize="36" FontWeight="Bold" Foreground="White"/><TextBlock Text="Instalação no posto" Foreground="#BFD9CB" Margin="0,3,0,32" FontSize="15"/></StackPanel>
+    <StackPanel DockPanel.Dock="Bottom"><Border Height="1" Background="#3B5E50" Margin="0,0,0,18"/><TextBlock Text="SEU BANCO, SUA OPERAÇÃO" FontSize="10" FontWeight="Bold" Foreground="#A3C6B4"/><TextBlock Text="Usa o banco existente.&#10;Preserva a estrutura do banco." Foreground="#DAE9E1" FontSize="13" Margin="0,10,0,14"/><TextBlock Text="Windows x64  ·  v1.0.0" Foreground="#A3C6B4" FontSize="12"/></StackPanel>
+    <StackPanel x:Name="StepNav">
+     <TextBlock x:Name="Step0" Text="01   Conexão com o banco" Foreground="White" FontWeight="SemiBold" Margin="0,14,0,20"/>
+     <TextBlock x:Name="Step1" Text="02   Acesso à interface" Foreground="#A3C6B4" Margin="0,0,0,20"/>
+     <TextBlock x:Name="Step2" Text="03   Conferir e instalar" Foreground="#A3C6B4" Margin="0,0,0,20"/>
+     <TextBlock x:Name="Step3" Text="04   Tudo para começar" Foreground="#A3C6B4"/>
+    </StackPanel>
+   </DockPanel>
+  </Border>
+  <Grid Grid.Column="1" Margin="32,27,32,0">
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="76"/></Grid.RowDefinitions>
+   <StackPanel Margin="0,0,0,22"><TextBlock x:Name="Eyebrow" Text="CONFIGURAÇÃO INICIAL" Foreground="#126B4B" FontSize="11" FontWeight="Bold"/><TextBlock x:Name="PageTitle" Text="Conecte ao banco do posto" FontSize="27" FontWeight="SemiBold" Margin="0,7,0,8"/><TextBlock x:Name="PageDescription" Text="Informe o SQL Server que já contém o ATXDADOS. Vamos testar a conexão antes de instalar." Foreground="{StaticResource Muted}"/></StackPanel>
+   <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+    <Grid>
+     <StackPanel x:Name="SqlPage">
+      <Border Style="{StaticResource Card}"><StackPanel>
+       <TextBlock Text="Conexão SQL Server" FontSize="17" FontWeight="SemiBold"/>
+       <DockPanel><Button Content="Restaurar padrões" Click="RestoreDefaultsClicked" DockPanel.Dock="Right" Padding="12,7"/><TextBlock Text="Padrões do posto · campos editáveis" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,12,0"/></DockPanel>
+       <TextBlock Text="Servidor ou instância" Style="{StaticResource FieldLabel}"/><ComboBox x:Name="SqlServerBox" IsEditable="True" Text="localhost" AutomationProperties.Name="Servidor SQL"/>
+       <TextBlock Text="Use localhost se o SQL estiver neste PC, ou informe SERVIDOR\INSTANCIA / IP do servidor SQL." Style="{StaticResource Hint}"/>
+       <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="18"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Usuário do banco" Style="{StaticResource FieldLabel}"/><TextBox x:Name="SqlUserBox" Text="sa" AutomationProperties.Name="Usuário SQL"/></StackPanel>
+        <StackPanel Grid.Column="2"><TextBlock Text="Banco de dados" Style="{StaticResource FieldLabel}"/><TextBox x:Name="DatabaseBox" Text="ATXDADOS" AutomationProperties.Name="Banco de dados"/></StackPanel>
+       </Grid>
+       <TextBlock Text="Senha do banco" Style="{StaticResource FieldLabel}"/><PasswordBox x:Name="SqlPasswordBox" AutomationProperties.Name="Senha SQL"/>
+       <TextBlock Text="Use a senha que o posto já utiliza no SQL Server." Style="{StaticResource Hint}"/>
+       <CheckBox x:Name="TrustSqlBox"><TextBlock Text="Aceitar o certificado próprio do SQL Server"/></CheckBox>
+       <TextBlock Text="Para servidores da rede interna: mantém a criptografia, mas dispensa a validação da identidade do certificado SQL." Style="{StaticResource Hint}" Margin="22,6,0,14"/>
+       <Button x:Name="TestSqlButton" Content="Testar conexão" HorizontalAlignment="Left" Click="TestSqlClicked"/>
+       <TextBlock x:Name="SqlResult" Foreground="#126B4B" Margin="0,12,0,0"/>
+      </StackPanel></Border>
+     </StackPanel>
+     <StackPanel x:Name="AccessPage" Visibility="Collapsed">
+      <Border Style="{StaticResource Card}"><StackPanel>
+       <DockPanel><Button Content="Restaurar padrões" Click="RestoreDefaultsClicked" DockPanel.Dock="Right" Padding="12,7"/><TextBlock Text="Endereço para abrir o LMC" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
+       <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="18"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="IP ou nome deste computador" Style="{StaticResource FieldLabel}"/><ComboBox x:Name="AddressBox" IsEditable="True" AutomationProperties.Name="Endereço da aplicação"/></StackPanel>
+        <StackPanel Grid.Column="2"><TextBlock Text="Porta HTTPS" Style="{StaticResource FieldLabel}"/><TextBox x:Name="PortBox" Text="5443"/></StackPanel>
+       </Grid>
+       <TextBlock Text="O programa será instalado neste PC. Use um IP fixo para os outros computadores continuarem encontrando o LMC." Style="{StaticResource Hint}"/>
+       <CheckBox x:Name="TrustHttpsBox" IsChecked="True"><TextBlock Text="Preparar o certificado HTTPS neste computador"/></CheckBox>
+       <TextBlock Text="Adiciona às autoridades confiáveis deste Windows somente o certificado gerado para este LMC." Style="{StaticResource Hint}" Margin="22,6,0,0"/>
+       <CheckBox x:Name="ShortcutBox" Content="Criar atalho Abrir LMC na área de trabalho" IsChecked="True"/>
+      </StackPanel></Border>
+      <Border Style="{StaticResource Card}"><StackPanel>
+       <TextBlock Text="Crie o acesso à interface" FontSize="17" FontWeight="SemiBold"/>
+       <TextBlock Text="Geramos uma senha inicial exclusiva de 10 caracteres. Você pode copiá-la ou editar os campos abaixo. Este login é para entrar pelo navegador." Style="{StaticResource Hint}"/>
+       <TextBlock Text="Usuário da interface" Style="{StaticResource FieldLabel}"/><TextBox x:Name="OperatorBox" Text="operador"/>
+       <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="18"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Nova senha · mínimo 10 caracteres" Style="{StaticResource FieldLabel}"/><PasswordBox x:Name="OperatorPasswordBox" AutomationProperties.Name="Senha da interface"/></StackPanel>
+        <StackPanel Grid.Column="2"><TextBlock Text="Confirme a nova senha" Style="{StaticResource FieldLabel}"/><PasswordBox x:Name="OperatorConfirmBox" AutomationProperties.Name="Confirmação da senha"/></StackPanel>
+       </Grid>
+       <WrapPanel Margin="0,14,0,0"><Button Content="Copiar senha da interface" Click="CopyOperatorPasswordClicked" Margin="0,0,10,0"/><Button Content="Gerar outra senha" Click="GeneratePasswordClicked"/></WrapPanel>
+      </StackPanel></Border>
+     </StackPanel>
+     <StackPanel x:Name="ReviewPage" Visibility="Collapsed">
+      <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Confira a instalação" FontSize="18" FontWeight="SemiBold"/><TextBlock x:Name="ReviewText" Margin="0,18,0,0" LineHeight="29"/></StackPanel></Border>
+      <Border Style="{StaticResource Card}" Background="#EDF5EE"><StackPanel><TextBlock Text="Acesso pela rede" FontWeight="SemiBold"/><TextBlock x:Name="NetworkText" Margin="0,9,0,0"/><TextBlock Text="O instalador libera a porta somente na rede local, em perfis Privado ou Domínio. Ele não muda o perfil da rede automaticamente." Style="{StaticResource Hint}" Margin="0,12,0,0"/></StackPanel></Border>
+      <TextBlock Text="O serviço será iniciado com o Windows. A instalação faz apenas consultas de verificação no banco escolhido; não altera tabelas nem lançamentos." Foreground="{StaticResource Muted}"/>
+     </StackPanel>
+     <StackPanel x:Name="ProgressPage" Visibility="Collapsed">
+      <ProgressBar x:Name="InstallProgress" Height="6" IsIndeterminate="True" Foreground="#126B4B" Background="#DCE8DF" Margin="0,3,0,22"/>
+      <TextBox x:Name="InstallLog" IsReadOnly="True" TextWrapping="Wrap" FontSize="13" FontFamily="Consolas" Height="355" VerticalScrollBarVisibility="Auto" Background="#FDFEFD"/>
+      <TextBlock Text="Aguarde a conclusão. Você verá o endereço e os testes de acesso na próxima tela." Style="{StaticResource Hint}"/>
+     </StackPanel>
+     <StackPanel x:Name="CompletePage" Visibility="Collapsed">
+      <Border Style="{StaticResource Card}" Background="#EDF5EE"><StackPanel><TextBlock Text="Seu endereço do LMC" FontWeight="SemiBold"/><TextBlock x:Name="FinalUrl" FontSize="25" FontWeight="SemiBold" Margin="0,10,0,10"/><TextBlock x:Name="FinalUser"/><WrapPanel Margin="0,18,0,0"><Button Content="Abrir LMC" Style="{StaticResource Primary}" Click="OpenLmcClicked" Margin="0,0,10,8"/><Button Content="Copiar endereço" Click="CopyUrlClicked" Margin="0,0,10,8"/><Button x:Name="CopyCredentialsButton" Content="Copiar login e senha" Click="CopyCredentialsClicked" Visibility="Collapsed" Margin="0,0,0,8"/></WrapPanel><TextBlock x:Name="CredentialsHint" Text="Guarde o acesso antes de fechar. Depois, a senha não poderá ser consultada pelo instalador." Style="{StaticResource Hint}" Visibility="Collapsed" Margin="0,6,0,0"/></StackPanel></Border>
+      <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Verificação do acesso" FontWeight="SemiBold"/><TextBlock x:Name="FinalDiagnosis" Margin="0,10,0,12" LineHeight="23"/><Button Content="Testar novamente" Click="DiagnoseClicked" HorizontalAlignment="Left"/></StackPanel></Border>
+      <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Outros computadores do posto" FontWeight="SemiBold"/><TextBlock Text="Exporte o certificado público, instale-o como confiável nos computadores autorizados e abra o endereço acima. Confira a impressão digital antes de instalar." Style="{StaticResource Hint}"/><WrapPanel><Button Content="Exportar certificado público" Click="ExportCertificateClicked" Margin="0,0,10,8"/><Button Content="Preparar certificado neste PC" Click="TrustCertificateClicked" Margin="0,0,0,8"/></WrapPanel><TextBlock x:Name="CertificateFingerprint" FontSize="11" Foreground="{StaticResource Muted}"/></StackPanel></Border>
+     </StackPanel>
+     <StackPanel x:Name="MaintenancePage" Visibility="Collapsed">
+      <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="O LMC já está instalado neste computador" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="A conexão, o operador e as senhas existentes serão preservados." Style="{StaticResource Hint}"/><TextBlock x:Name="MaintenanceUrl" FontSize="23" FontWeight="SemiBold" Margin="0,6,0,16"/><WrapPanel><Button Content="Abrir LMC" Style="{StaticResource Primary}" Click="OpenLmcClicked" Margin="0,0,10,8"/><Button Content="Verificar acesso" Click="DiagnoseClicked" Margin="0,0,10,8"/><Button Content="Iniciar serviço" Click="StartServiceClicked" Margin="0,0,0,8"/></WrapPanel></StackPanel></Border>
+      <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="Diagnóstico" FontWeight="SemiBold"/><TextBox x:Name="MaintenanceDiagnosis" IsReadOnly="True" TextWrapping="Wrap" Height="175" VerticalScrollBarVisibility="Auto" BorderThickness="0" Padding="0,12" Background="Transparent" FontSize="13"/><Button Content="Copiar diagnóstico" Click="CopyDiagnosisClicked" HorizontalAlignment="Left"/></StackPanel></Border>
+      <WrapPanel><Button Content="Preparar certificado neste PC" Click="TrustCertificateClicked" Margin="0,0,10,8"/><Button Content="Exportar certificado público" Click="ExportCertificateClicked" Margin="0,0,0,8"/></WrapPanel>
+      <Button x:Name="UpdateButton" Content="Atualizar aplicação" Click="UpdateClicked" HorizontalAlignment="Left" Margin="0,14,0,0"/><TextBlock Text="A atualização reinicia o serviço. Faça isso quando os operadores terminarem os lançamentos." Style="{StaticResource Hint}"/>
+     </StackPanel>
+    </Grid>
+   </ScrollViewer>
+   <TextBlock Grid.Row="2" x:Name="StatusText" Foreground="#A03D28" Margin="0,10,0,0" MaxHeight="94" TextTrimming="CharacterEllipsis"/>
+   <Grid Grid.Row="3"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Button x:Name="CancelButton" Content="Fechar" HorizontalAlignment="Left" VerticalAlignment="Center" Click="CancelClicked"/><Button x:Name="BackButton" Grid.Column="1" Content="Voltar" Visibility="Collapsed" Margin="0,0,10,0" VerticalAlignment="Center" Click="BackClicked"/><Button x:Name="NextButton" Grid.Column="2" Content="Continuar →" Style="{StaticResource Primary}" VerticalAlignment="Center" MinWidth="145" Click="NextClicked"/></Grid>
+  </Grid>
+ </Grid>
+</Window>

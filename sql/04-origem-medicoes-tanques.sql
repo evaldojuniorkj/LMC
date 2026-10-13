@@ -1,0 +1,178 @@
+-- Diagnostico somente leitura no ATXDADOS. Nao executa procedures ou triggers.
+-- Valores e coincidencias nao comprovam marca, protocolo ou origem de uma leitura.
+-- A tolerancia de 0.02 L serve apenas para comparar real/float; nao e normativa.
+SET NOCOUNT ON;
+SET LOCK_TIMEOUT 5000;
+
+DECLARE @Filial smallint = 17581;
+DECLARE @Tolerancia decimal(19,6) = 0.02;
+DECLARE @FimLMC date = (SELECT CONVERT(date, MAX(DTACONTA)) FROM dbo.LMC WHERE ID_FILIAL = @Filial);
+DECLARE @InicioLMC date = DATEADD(day, -29, @FimLMC);
+DECLARE @UltimaLeitura date = (SELECT CONVERT(date, MAX(DATA)) FROM dbo.LEITURASTANQUES WHERE ID_FILIAL = @Filial);
+DECLARE @MesLeitura date = DATEFROMPARTS(YEAR(@UltimaLeitura), MONTH(@UltimaLeitura), 1);
+
+SELECT DB_NAME() AS Banco, @Filial AS Filial, @InicioLMC AS InicioLMC,
+       @FimLMC AS FimLMC, @UltimaLeitura AS UltimaLeitura,
+       @Tolerancia AS ToleranciaExploratoriaLitros;
+
+-- Nao expor enderecos de rede nem tentar conexoes aos equipamentos.
+SELECT ID_CFG_MEDIDORTANQUE, ID_FILIAL, MODELO_MEDIDOR, USARSERVIDOR, USA_XPSERVER,
+       CASE WHEN NULLIF(LTRIM(RTRIM(ENDERECO_SERVIDOR)), '') IS NULL THEN 0 ELSE 1 END AS TemEnderecoServidor,
+       CASE WHEN NULLIF(LTRIM(RTRIM(IPS2)), '') IS NULL THEN 0 ELSE 1 END AS TemIPS2
+FROM dbo.CFG_MEDIDORTANQUE WHERE ID_FILIAL = @Filial;
+SELECT AUTOLEITURATANQUES, COUNT_BIG(*) AS Configuracoes
+FROM dbo.CFGGERAL GROUP BY AUTOLEITURATANQUES;
+
+-- Outras integracoes: separar automacao de bicos e medicao de tanques.
+-- Codigos de modelo nao identificam por si o protocolo ou o fabricante.
+SELECT USARAUTOMACAO, AUTOLEITURATANQUES,
+       CASE WHEN NULLIF(LTRIM(RTRIM(URLXPSERVER)), '') IS NULL THEN 0 ELSE 1 END AS TemURLXPServer
+FROM dbo.CFGGERAL;
+SELECT ID_CFGCONSOLE, ID_FILIAL, MODELOAUTOMACAO, MCEIP,
+       CASE WHEN PORTATCP IS NULL OR PORTATCP = 0 THEN 0 ELSE 1 END AS TemPortaTCP,
+       CASE WHEN NULLIF(LTRIM(RTRIM(ENDERECO)), '') IS NULL THEN 0 ELSE 1 END AS TemEndereco,
+       CASE WHEN NULLIF(LTRIM(RTRIM(SERVIDORMCE)), '') IS NULL THEN 0 ELSE 1 END AS TemServidorMCE
+FROM dbo.CFGCONSOLE WHERE ID_FILIAL = @Filial;
+SELECT ID_FILIAL, AUTOMACAO, COUNT_BIG(*) AS Registros,
+       MIN(DATA) AS Inicio, MAX(DATA) AS Fim, COUNT(DISTINCT ID_BICOS) AS Bicos
+FROM dbo.CONSOLE WHERE ID_FILIAL = @Filial GROUP BY ID_FILIAL, AUTOMACAO;
+SELECT ID_FILIAL, COUNT_BIG(*) AS Registros, MIN(DATA) AS Inicio,
+       MAX(DATA) AS Fim, COUNT(DISTINCT ID_BICOS) AS Bicos
+FROM dbo.CONSOLEARQUIVO WHERE ID_FILIAL = @Filial GROUP BY ID_FILIAL;
+
+SELECT 'LEITURASTANQUES' AS Tabela, COUNT_BIG(*) AS Registros, COUNT(DISTINCT ID_TANQUES) AS Tanques,
+       MIN(DATA) AS Inicio, MAX(DATA) AS Fim
+FROM dbo.LEITURASTANQUES WHERE ID_FILIAL = @Filial
+UNION ALL
+SELECT 'MOVTANQUES', COUNT_BIG(*), COUNT(DISTINCT ID_TANQUES), MIN(DTACONTA), MAX(DTACONTA)
+FROM dbo.MOVTANQUES WHERE ID_FILIAL = @Filial
+UNION ALL
+SELECT 'ESTOQUETANQUELMC', COUNT_BIG(*), COUNT(DISTINCT ID_TANQUES), MIN(DTACONTA), MAX(DTACONTA)
+FROM dbo.ESTOQUETANQUELMC WHERE ID_FILIAL = @Filial;
+
+SELECT 'EDICAO_LEITURA_TANQUES' AS Tabela, COUNT_BIG(*) AS Registros
+FROM dbo.EDICAO_LEITURA_TANQUES WHERE ID_FILIAL = @Filial
+UNION ALL SELECT 'MOVQTDETANQUES', COUNT_BIG(*) FROM dbo.MOVQTDETANQUES WHERE ID_FILIAL = @Filial;
+
+SELECT ID_TANQUES, DATA, CONVERT(decimal(19,2), QTDEANTERIOR) AS QtdeAnterior,
+       CONVERT(decimal(19,2), QTDELIDA) AS QtdeLida, SINCRONIZADO
+FROM dbo.LEITURASTANQUES WHERE ID_FILIAL = @Filial ORDER BY DATA, ID_TANQUES;
+
+SELECT ABERTURA, COUNT_BIG(*) AS Movimentos,
+       SUM(CASE WHEN LEITURA IS NULL THEN 1 ELSE 0 END) AS LeiturasNulas,
+       SUM(CASE WHEN LEITURA = 0 THEN 1 ELSE 0 END) AS LeiturasZero,
+       SUM(CASE WHEN LEITURA <> 0 THEN 1 ELSE 0 END) AS LeiturasNaoZero,
+       SUM(CASE WHEN CENTIMETROS > 0 THEN 1 ELSE 0 END) AS ComCentimetros
+FROM dbo.MOVTANQUES WHERE ID_FILIAL = @Filial GROUP BY ABERTURA;
+
+SELECT YEAR(DTACONTA) AS Ano, MONTH(DTACONTA) AS Mes, COUNT_BIG(*) AS Registros,
+       SUM(CASE WHEN LEITURA <> 0 THEN 1 ELSE 0 END) AS LeiturasNaoZero
+FROM dbo.MOVTANQUES WHERE ID_FILIAL = @Filial
+GROUP BY YEAR(DTACONTA), MONTH(DTACONTA) ORDER BY Ano DESC, Mes DESC;
+
+SELECT COUNT_BIG(*) AS Estoques,
+       SUM(CASE WHEN QTDETANQUE IS NULL THEN 1 ELSE 0 END) AS QtdeNula,
+       SUM(CASE WHEN QTDECONCILIACAO IS NULL THEN 1 ELSE 0 END) AS ConciliacaoNula
+FROM dbo.ESTOQUETANQUELMC WHERE ID_FILIAL = @Filial;
+
+-- Duplicidades sao apresentadas antes de comparar valores por dia.
+SELECT 'ESTOQUETANQUELMC' AS Tabela, COUNT_BIG(*) AS GruposRepetidos
+FROM (SELECT ID_TANQUES, CONVERT(date, DTACONTA) AS Dia FROM dbo.ESTOQUETANQUELMC
+      WHERE ID_FILIAL = @Filial GROUP BY ID_TANQUES, CONVERT(date, DTACONTA) HAVING COUNT_BIG(*) > 1) d
+UNION ALL
+SELECT 'MOVTANQUES', COUNT_BIG(*) FROM (SELECT ID_TANQUES, CONVERT(date, DTACONTA) AS Dia FROM dbo.MOVTANQUES
+      WHERE ID_FILIAL = @Filial GROUP BY ID_TANQUES, CONVERT(date, DTACONTA) HAVING COUNT_BIG(*) > 1) d
+UNION ALL
+SELECT 'LEITURASTANQUES', COUNT_BIG(*) FROM (SELECT ID_TANQUES, CONVERT(date, DATA) AS Dia FROM dbo.LEITURASTANQUES
+      WHERE ID_FILIAL = @Filial GROUP BY ID_TANQUES, CONVERT(date, DATA) HAVING COUNT_BIG(*) > 1) d;
+
+-- Comparar datas e volumes; nao assumir equivalencia de datas nem aplicar deslocamentos.
+SELECT r.ID_TANQUES, CONVERT(varchar(19), r.DATA, 120) AS DataLeitura,
+       CONVERT(decimal(19,2), r.QTDELIDA) AS QtdeLida,
+       m.N AS MovimentosMesmoDia,
+       CASE WHEN m.N = 1 THEN CONVERT(decimal(19,2), m.Leitura) END AS LeituraMovimento,
+       e.N AS EstoquesDiaAnterior,
+       CASE WHEN e.N = 1 THEN CONVERT(date, e.DataEstoque) END AS DataEstoque,
+       CASE WHEN e.N = 1 THEN CONVERT(decimal(19,2), e.Qtde) END AS QtdeEstoque
+FROM dbo.LEITURASTANQUES r
+OUTER APPLY (SELECT COUNT_BIG(*) AS N, MAX(LEITURA) AS Leitura FROM dbo.MOVTANQUES m
+             WHERE m.ID_FILIAL = r.ID_FILIAL AND m.ID_TANQUES = r.ID_TANQUES
+               AND m.DTACONTA >= CONVERT(date, r.DATA) AND m.DTACONTA < DATEADD(day, 1, CONVERT(date, r.DATA))) m
+OUTER APPLY (SELECT COUNT_BIG(*) AS N, MAX(QTDETANQUE) AS Qtde, MAX(DTACONTA) AS DataEstoque FROM dbo.ESTOQUETANQUELMC e
+             WHERE e.ID_FILIAL = r.ID_FILIAL AND e.ID_TANQUES = r.ID_TANQUES
+               AND e.DTACONTA >= DATEADD(day, -1, CONVERT(date, r.DATA)) AND e.DTACONTA < CONVERT(date, r.DATA)) e
+WHERE r.ID_FILIAL = @Filial ORDER BY r.ID_TANQUES;
+
+WITH e AS (
+    SELECT ID_TANQUES, CONVERT(date, DTACONTA) AS Dia, COUNT_BIG(*) AS N,
+           MAX(CONVERT(decimal(19,6), QTDETANQUE)) AS Qtde
+    FROM dbo.ESTOQUETANQUELMC WHERE ID_FILIAL = @Filial GROUP BY ID_TANQUES, CONVERT(date, DTACONTA)
+), m AS (
+    SELECT ID_TANQUES, CONVERT(date, DTACONTA) AS Dia, COUNT_BIG(*) AS N,
+           MAX(CONVERT(decimal(19,6), LEITURA)) AS Leitura
+    FROM dbo.MOVTANQUES WHERE ID_FILIAL = @Filial GROUP BY ID_TANQUES, CONVERT(date, DTACONTA)
+)
+SELECT periodo.Escopo, COUNT_BIG(*) AS Estoques,
+       SUM(CASE WHEN e.N = 1 AND d.N = 1 THEN 1 ELSE 0 END) AS ParesMesmoDia,
+       SUM(CASE WHEN e.N = 1 AND d.N = 1 AND ABS(e.Qtde - d.Leitura) <= @Tolerancia THEN 1 ELSE 0 END) AS IguaisMesmoDia,
+       SUM(CASE WHEN e.N = 1 AND s.N = 1 THEN 1 ELSE 0 END) AS ParesDiaSeguinte,
+       SUM(CASE WHEN e.N = 1 AND s.N = 1 AND ABS(e.Qtde - s.Leitura) <= @Tolerancia THEN 1 ELSE 0 END) AS IguaisDiaSeguinte
+FROM e
+LEFT JOIN m d ON d.ID_TANQUES = e.ID_TANQUES AND d.Dia = e.Dia
+LEFT JOIN m s ON s.ID_TANQUES = e.ID_TANQUES AND s.Dia = DATEADD(day, 1, e.Dia)
+CROSS JOIN (VALUES ('Historico'), ('MesUltimaLeitura')) periodo(Escopo)
+WHERE periodo.Escopo = 'Historico' OR (e.Dia >= @MesLeitura AND e.Dia < DATEADD(month, 1, @MesLeitura))
+GROUP BY periodo.Escopo;
+
+-- Hipoteses sobre os campos do LMC: coincidencia nao comprova origem fisica.
+WITH lt AS (
+    SELECT l.ID_FILIAL, l.ID_LMC, CONVERT(date, l.DTACONTA) AS Dia, t.ID_TANQUES,
+           CONVERT(decimal(19,6), t.QTDETANQUE) AS Qtde, CONVERT(decimal(19,6), t.QTDECONCILIACAO) AS Conc
+    FROM dbo.LMC l JOIN dbo.LMCTANQUES t ON t.ID_FILIAL = l.ID_FILIAL AND t.ID_LMC = l.ID_LMC
+    WHERE l.ID_FILIAL = @Filial
+), p AS (
+    SELECT ID_TANQUES, Dia, COUNT_BIG(*) AS N, MAX(Conc) AS Conc FROM lt GROUP BY ID_TANQUES, Dia
+), e AS (
+    SELECT ID_TANQUES, CONVERT(date, DTACONTA) AS Dia, COUNT_BIG(*) AS N,
+           MAX(CONVERT(decimal(19,6), QTDETANQUE)) AS Qtde
+    FROM dbo.ESTOQUETANQUELMC WHERE ID_FILIAL = @Filial GROUP BY ID_TANQUES, CONVERT(date, DTACONTA)
+), v AS (
+    SELECT ID_LMC, ID_TANQUES, SUM(CONVERT(decimal(19,6), VENDAS)) AS Vendas
+    FROM dbo.LMCBICOS WHERE ID_FILIAL = @Filial GROUP BY ID_LMC, ID_TANQUES
+), r AS (
+    SELECT ID_LMC, ID_TANQUES, SUM(CONVERT(decimal(19,6), VOLUMERECEBIDO)) AS Recebimentos
+    FROM dbo.LMCCOMPROVANTES WHERE ID_FILIAL = @Filial GROUP BY ID_LMC, ID_TANQUES
+)
+SELECT COUNT_BIG(*) AS LinhasLMC,
+       SUM(CASE WHEN p.N = 1 THEN 1 ELSE 0 END) AS ComDiaAnteriorUnico,
+       SUM(CASE WHEN p.N = 1 AND ABS(t.Qtde - p.Conc) <= @Tolerancia THEN 1 ELSE 0 END) AS QtdeIgualConcAnterior,
+       SUM(CASE WHEN v.Vendas IS NOT NULL AND ABS(t.Conc - (t.Qtde + COALESCE(r.Recebimentos, 0) - v.Vendas)) <= @Tolerancia THEN 1 ELSE 0 END) AS ConcIgualSaldoCalculado,
+       SUM(CASE WHEN e.N = 1 THEN 1 ELSE 0 END) AS ComEstoqueMesmoDia,
+       SUM(CASE WHEN e.N = 1 AND ABS(t.Qtde - e.Qtde) <= @Tolerancia THEN 1 ELSE 0 END) AS QtdeIgualEstoque,
+       SUM(CASE WHEN e.N = 1 AND ABS(t.Conc - e.Qtde) <= @Tolerancia THEN 1 ELSE 0 END) AS ConcIgualEstoque,
+       SUM(CASE WHEN t.Qtde < 0 THEN 1 ELSE 0 END) AS QtdeNegativa,
+       SUM(CASE WHEN t.Conc < 0 THEN 1 ELSE 0 END) AS ConcNegativa
+FROM lt t
+LEFT JOIN p ON p.ID_TANQUES = t.ID_TANQUES AND p.Dia = DATEADD(day, -1, t.Dia)
+LEFT JOIN e ON e.ID_TANQUES = t.ID_TANQUES AND e.Dia = t.Dia
+LEFT JOIN v ON v.ID_LMC = t.ID_LMC AND v.ID_TANQUES = t.ID_TANQUES
+LEFT JOIN r ON r.ID_LMC = t.ID_LMC AND r.ID_TANQUES = t.ID_TANQUES
+WHERE t.Dia BETWEEN @InicioLMC AND @FimLMC;
+
+SELECT t.ID_TANQUES, CONVERT(date, l.DTACONTA) AS DiaLMC,
+       CONVERT(decimal(19,2), t.QTDETANQUE) AS QtdeTanqueLMC,
+       CONVERT(decimal(19,2), t.QTDECONCILIACAO) AS QtdeConciliacaoLMC
+FROM dbo.LMC l JOIN dbo.LMCTANQUES t ON t.ID_FILIAL = l.ID_FILIAL AND t.ID_LMC = l.ID_LMC
+WHERE l.ID_FILIAL = @Filial AND l.DTACONTA >= @FimLMC AND l.DTACONTA < DATEADD(day, 1, @FimLMC)
+ORDER BY t.ID_TANQUES;
+
+SELECT COUNT_BIG(*) AS Movimentos,
+       SUM(CASE WHEN u.ID_TURNOS IS NULL THEN 1 ELSE 0 END) AS SemTurno,
+       SUM(CASE WHEN CONVERT(date, m.DTACONTA) <> CONVERT(date, u.DATATURNO) THEN 1 ELSE 0 END) AS DataDiferenteDoTurno,
+       SUM(CASE WHEN m.ID_TURNOS = 1 THEN 1 ELSE 0 END) AS VinculadosTurno1
+FROM dbo.MOVTANQUES m LEFT JOIN dbo.TURNOS u ON u.ID_FILIAL = m.ID_FILIAL AND u.ID_TURNOS = m.ID_TURNOS
+WHERE m.ID_FILIAL = @Filial;
+
+SELECT COUNT_BIG(*) AS Rotinas, SUM(CASE WHEN OBJECTPROPERTY(object_id, 'IsEncrypted') = 1 THEN 1 ELSE 0 END) AS Criptografadas
+FROM sys.objects WHERE type IN ('P','TR')
+  AND (name LIKE '%TANQ%' OR name LIKE '%MEDID%' OR name LIKE '%SOND%' OR name LIKE '%VEED%');

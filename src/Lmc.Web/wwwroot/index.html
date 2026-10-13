@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#122b2a">
+  <title>Revisão de notas · LMC</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23122b2a'/%3E%3Cpath d='M12 10v20h17v-5H17V10z' fill='%238bddb2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/session.js" defer></script>
+  <script src="/app.js" defer></script>
+  <script src="/book-closing.js" defer></script>
+  <script src="/book-tank-table.js" defer></script>
+  <script src="/book-ui.js" defer></script>
+  <script src="/book-delete.js" defer></script>
+  <script src="/book-pending.js" defer></script>
+  <script src="/tank-tables.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
+  <aside class="sidebar" aria-label="Navegação principal">
+    <a class="brand" href="/" aria-label="LMC — início"><span class="brand-mark">L</span><span>LMC<span class="brand-sub">CONTROLE DE COMBUSTÍVEIS</span></span></a>
+    <div class="sidebar-label">ROTINA DIÁRIA</div>
+    <nav>
+      <button class="nav-item active" id="nav-notes" aria-current="page"><span class="nav-icon">01</span>Revisão de notas</button>
+      <button class="nav-item" id="nav-books"><span class="nav-icon">02</span>Conferência do LMC</button>
+      <button class="nav-item" id="nav-pending"><span class="nav-icon">03</span>Pendências do LMC</button>
+      <button class="nav-item" id="nav-tables"><span class="nav-icon">04</span>Tabelas dos tanques</button>
+    </nav>
+    <div class="sidebar-bottom"><span class="connection-dot"></span><span id="connection">Conectando ao banco…</span><small id="deployment-label">Interface LMC</small></div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar"><div class="breadcrumb">Operação diária <span>/</span> <strong id="breadcrumb-current">Revisão de notas</strong></div><div class="topbar-actions"><div class="branch-control"><span>UNIDADE</span><label class="sr-only" for="branch">Unidade</label><select id="branch" disabled><option>Carregando…</option></select></div><details id="operator-menu" class="operator-menu" hidden><summary><span id="operator-name">Operador</span><span aria-hidden="true">⌄</span></summary><div class="operator-popup"><button id="change-password" type="button">Trocar senha</button><button id="logout" type="button" hidden>Sair</button></div></details></div></header>
+    <p id="account-feedback" class="account-feedback" role="status" hidden></p>
+    <div class="mobile-navigation"><label for="mobile-view">Menu</label><select id="mobile-view"><option value="notes">Revisão de notas</option><option value="books">Conferência do LMC</option><option value="pending">Pendências do LMC</option><option value="tables">Tabelas dos tanques</option></select></div>
+    <main id="main-content" tabindex="-1">
+      <div id="global-error" class="notice error" role="alert" hidden></div>
+      <div id="review-feedback" class="notice success" role="status" hidden></div>
+      <section id="notes-view" aria-labelledby="page-title">
+        <p id="pending-notes-context" class="notice information" role="status" hidden></p>
+        <div class="page-heading"><div><p class="eyebrow">ETAPA 01 <span>DE 02</span></p><h1 id="page-title">Revisão de notas de entrada</h1><p class="subtitle">Confira as datas, os turnos e os volumes por tanque antes de seguir para o LMC.</p></div><button class="button secondary" id="refresh" aria-label="Atualizar dados">↻ <span>Atualizar dados</span></button></div>
+        <div class="workflow" aria-label="Etapas do processo"><span class="workflow-step active"><b>1</b> Revisar notas</span><span class="workflow-line"></span><span class="workflow-step"><b>2</b> Conferir o LMC</span><span class="mode-tag">Revisão e correção</span></div>
+        <div class="metrics" aria-label="Resumo da busca">
+          <article class="metric"><span>Notas no período</span><strong id="metric-total">—</strong><small>Entradas de combustível</small></article>
+          <article class="metric amber"><span>Para conferir</span><strong id="metric-attention">—</strong><small>Candidatas à revisão</small></article>
+          <article class="metric"><span>Intervalo prolongado</span><strong id="metric-delayed">—</strong><small id="threshold-caption">5 dias ou mais entre datas</small></article>
+          <article class="metric"><span>Data do LMC anterior</span><strong id="metric-earlier">—</strong><small>Anterior à entrada da nota</small></article>
+        </div>
+        <div class="notice information"><span class="notice-icon">i</span><div><strong>Encontre a nota mesmo quando a data de entrada estiver errada.</strong><p>A busca inicia no mês anterior e considera qualquer uma das datas da nota. Altere ou limpe o período para consultar outros meses.</p></div></div>
+        <section class="panel" aria-label="Lista de notas">
+          <form id="filters" class="filters">
+            <div class="search-field"><label for="search">Buscar nota</label><input type="search" id="search" placeholder="Número da nota, fornecedor ou produto" maxlength="120" autocomplete="off"></div>
+            <div><label for="from">De</label><input type="date" id="from" min="1900-01-01" max="2078-12-31"></div>
+            <div><label for="until">Até</label><input type="date" id="until" min="1900-01-01" max="2078-12-31"></div>
+            <div><label for="date-field">Pesquisar por</label><select id="date-field"><option value="any">Qualquer data</option><option value="operational">Data do LMC</option><option value="document">Emissão da nota</option><option value="issue">Entrada da nota</option></select></div>
+            <button class="button primary filter-button" type="submit">Filtrar</button>
+          </form>
+          <div class="list-toolbar"><div class="tabs" role="group" aria-label="Situação das notas"><button class="tab" data-status="all" aria-pressed="false">Todas as notas <span id="tab-total">—</span></button><button class="tab active" data-status="attention" aria-pressed="true">Para conferir <span id="tab-attention">—</span></button></div><div class="list-options"><label for="threshold">Atenção a partir de</label><input id="threshold" type="number" value="5" min="1" max="365" aria-label="Dias para alerta de intervalo"><span>dias</span><label class="sr-only" for="sort">Ordenação</label><select id="sort"><option value="priority">Maior atenção primeiro</option><option value="recent">Mais recentes primeiro</option></select></div></div>
+          <div class="table-scroll" id="notes-region" aria-busy="true"><table class="notes-table"><thead><tr><th>Nota / fornecedor</th><th>Emissão / entrada</th><th>Data do LMC / turno</th><th class="numeric">Volume</th><th>Conferência</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody id="notes-body"><tr><td colspan="6" class="empty">Consultando notas no ATXDADOS…</td></tr></tbody></table></div>
+          <div class="table-footer"><span id="result-count" role="status" aria-live="polite">Carregando dados…</span><div class="pagination"><button class="button square" id="previous" aria-label="Página anterior" disabled>←</button><span id="page-number">1</span><button class="button square" id="next" aria-label="Próxima página" disabled>→</button></div></div>
+        </section>
+        <p class="source-note">O LMC considera a data operacional do lançamento. A emissão e a entrada da nota são mostradas separadamente para conferência.</p>
+        <div class="next-step"><div><strong>Primeiro as entradas, depois o fechamento.</strong><p id="next-context">Revise as notas antes de consultar os livros do período.</p></div><button class="button primary" id="continue">Continuar para o LMC <span>→</span></button></div>
+      </section>
+
+      <section id="books-view" hidden aria-labelledby="books-title">
+        <div class="page-heading"><div><p class="eyebrow">ETAPA 02 <span>DE 02</span></p><h1 id="books-title">Cadastro de LMC</h1><p class="subtitle">Consulte o mês, insira um dia ou refaça um livro após conferir as entradas.</p></div><button class="button secondary" id="back-notes">← Revisão de notas</button></div>
+        <div id="book-feedback" class="notice success" role="status" hidden></div>
+        <div id="book-list-pane">
+          <section class="panel ledger-panel"><form id="book-filter"><div><label for="book-month">Mês de referência</label><input id="book-month" type="month" min="1900-01" max="2078-12" required></div><div><label for="ledger-product">Combustível</label><select id="ledger-product"><option value="">Todos os combustíveis</option></select></div><button type="submit" class="button secondary">Consultar</button><button type="button" id="new-book" class="button primary">＋ Inserir LMC</button></form><div id="books-list" aria-live="polite" aria-busy="false"></div></section>
+          <div class="book-selection-bar"><span id="book-selected-count" role="status">Nenhum LMC selecionado</span><button id="clear-book-selection" class="button secondary" disabled>Limpar seleção</button><button id="delete-selected-books" class="button danger-outline" disabled>Excluir selecionados</button></div>
+          <p class="source-note">Os valores da lista são os que estão gravados. Nos livros antigos, confira a origem do estoque físico antes de refazer. Períodos afetados por correções precisam ser revisados.</p>
+        </div>
+        <div id="book-editor-pane" hidden>
+          <section class="panel book-workspace"><div class="book-editor-bar"><div><label for="editor-product">Combustível</label><select id="editor-product"></select></div><div><label for="book-date">Movimento</label><input id="book-date" type="date" min="1900-01-01" max="2078-12-31" required></div><div><label for="book-number">Folha</label><input id="book-number" readonly></div><fieldset id="measurement-method" class="measurement-choice"><legend>Origem do fechamento</legend><div class="measurement-options"><label><input id="measurement-manual" type="radio" name="measurement-method" value="manual" checked> Manual</label><label><input id="measurement-electronic" type="radio" name="measurement-method" value="eletronica"> Medidor eletrônico</label></div></fieldset><button id="close-book" class="button secondary">← Voltar à lista</button></div>
+          <div class="book-savebar"><div><strong id="book-save-state">Carregando…</strong><small id="book-save-description">A gravação inclui tanques, bicos e notas deste combustível.</small></div><button id="delete-book" class="button danger-outline" hidden>Excluir LMC</button><button id="reload-book" class="button secondary" hidden>Atualizar conferência</button><button id="save-book" class="button secondary" disabled>Salvar LMC</button><button id="save-next-book" class="button primary" disabled>Salvar e próximo →</button></div>
+          <div id="book-editor-body" tabindex="0" role="region" aria-label="Dados do LMC" aria-live="polite"></div></section>
+        </div>
+      </section>
+      <section id="pending-view" hidden aria-labelledby="pending-title">
+        <div class="page-heading"><div><p class="eyebrow">CONFERÊNCIA DOS LIVROS SALVOS</p><h1 id="pending-title">Pendências do LMC</h1><p class="subtitle">Encontre dias faltantes e diferenças na continuidade dos tanques e dos bicos.</p></div><button class="button secondary" id="refresh-pending">Atualizar</button></div>
+        <section class="panel pending-panel" aria-label="Pendências dos livros salvos">
+          <div class="pending-toolbar"><div><label for="pending-product">Combustível</label><select id="pending-product"><option value="">Todos os combustíveis</option></select></div><p id="pending-summary" role="status">Aguardando consulta</p></div>
+          <div class="tabs pending-tabs" role="group" aria-label="Tipo de pendência"><button type="button" class="tab active" id="pending-issues-tab" aria-pressed="true">Aberturas e bicos <span id="pending-issues-count">—</span></button><button type="button" class="tab" id="pending-tanks-tab" aria-pressed="false">Entradas por tanque <span id="pending-tanks-count">—</span></button><button type="button" class="tab" id="pending-gaps-tab" aria-pressed="false">Dias sem LMC <span id="pending-gaps-count">—</span></button></div>
+          <div id="pending-list" aria-live="polite" aria-busy="false"></div>
+        </section>
+        <p class="pending-help">A abertura de cada tanque e o encerrante inicial de cada bico devem coincidir com o fechamento salvo no dia anterior. A consulta usa o histórico de cada combustível, sem substituir dias faltantes por datas mais antigas. Conferir LMC abre o livro para revisão; nenhuma correção é aplicada automaticamente.</p>
+      </section>
+      <section id="tables-view" hidden aria-labelledby="tables-title">
+        <div class="page-heading"><div><p class="eyebrow">MEDIÇÃO POR TANQUE</p><h1 id="tables-title">Tabelas dos tanques</h1><p class="subtitle">Importe a tabela de cada modelo e escolha qual usar em cada tanque.</p></div><button type="button" class="button secondary" id="refresh-tank-tables">Atualizar</button></div>
+        <p id="tank-tables-error" class="notice error" role="alert" hidden></p>
+        <p id="tank-tables-feedback" class="notice success" role="status" hidden></p>
+        <div class="tank-settings-grid">
+          <section class="panel tank-import-panel" aria-labelledby="tank-import-title">
+            <h2 id="tank-import-title"><span class="settings-step">1</span> Importar tabela CSV</h2>
+            <p>Primeira coluna: <strong>altura em centímetros</strong>.<br>Segunda coluna: <strong>volume em litros</strong>.</p>
+            <form id="tank-import-form">
+              <label for="tank-csv-file">Arquivo CSV</label><input type="file" id="tank-csv-file" accept=".csv,text/csv" required aria-describedby="tank-csv-help">
+              <label for="tank-csv-name">Nome para identificar a tabela</label><input id="tank-csv-name" maxlength="100" required placeholder="Ex.: Etanol · tanque 15 mil litros">
+              <p id="tank-csv-help" class="field-hint">Até 512 KB. Separe as colunas por ponto e vírgula, vírgula ou tabulação. Use números sem separador de milhares. Com ponto e vírgula, os decimais podem usar vírgula.</p>
+              <button type="submit" id="preview-tank-csv" class="button secondary full">Conferir arquivo</button>
+            </form>
+            <div id="tank-csv-preview" hidden></div>
+            <button type="button" id="import-tank-csv" class="button primary full" hidden>Importar tabela</button>
+          </section>
+          <section class="panel tank-bindings-panel" aria-labelledby="tank-bindings-title">
+            <div class="tank-bindings-heading"><h2 id="tank-bindings-title"><span class="settings-step">2</span> Escolher por tanque</h2><p id="tank-binding-summary" role="status">Aguardando consulta…</p></div>
+            <div id="tank-bindings" aria-busy="false"></div>
+          </section>
+        </div>
+        <section class="panel tank-library-panel" aria-labelledby="tank-library-title"><div class="tank-bindings-heading"><h2 id="tank-library-title">Tabelas importadas</h2><p>Uma mesma tabela pode ser vinculada a mais de um tanque do mesmo modelo.</p></div><div id="tank-table-library"></div></section>
+        <p class="tank-storage-note">As tabelas e os vínculos ficam em arquivos no servidor da aplicação, fora do SQL Server. A escolha vale para as consultas do LMC; ela não preenche o fechamento nem altera livros já salvos.</p>
+      </section>
+    </main>
+    <footer class="app-footer"><span>LMC · Revisão de entradas</span><span id="updated">Aguardando consulta</span></footer>
+  </div>
+
+  <dialog id="delete-book-dialog" class="delete-book-dialog" aria-labelledby="delete-book-title" aria-describedby="delete-book-description">
+    <div class="delete-book-header"><h2 id="delete-book-title">Excluir LMC?</h2><button id="close-delete-book" class="button square" aria-label="Fechar confirmação de exclusão">✕</button></div>
+    <p id="delete-book-description">Confira o livro antes de confirmar. A exclusão remove este LMC e seus detalhes; as notas de entrada e a automação permanecem disponíveis.</p>
+    <div id="delete-book-content" aria-live="polite"></div>
+    <p id="delete-book-state" role="status"></p>
+    <div class="delete-book-actions"><button id="cancel-delete-book" class="button secondary" autofocus>Cancelar</button><button id="retry-delete-book" class="button secondary" hidden>Atualizar confirmação</button><button id="confirm-delete-book" class="button danger" disabled>Excluir este LMC</button></div>
+  </dialog>
+
+  <dialog id="review-dialog" aria-labelledby="review-title">
+    <div class="drawer-header"><div><p class="eyebrow">REVISAR LANÇAMENTO</p><h2 id="review-title">Nota de entrada</h2></div><button id="close-review" class="button square" aria-label="Fechar revisão">✕</button></div>
+    <div class="drawer-body"><div id="detail-content"></div><div id="review-error" class="notice error" role="alert" hidden></div>
+      <form id="review-form" hidden>
+        <div class="form-grid"><div><label for="target-date">Nova data do LMC</label><input type="date" id="target-date" required min="1900-01-01" max="2078-12-31"></div><div><label for="target-shift">Turno de destino</label><select id="target-shift" required disabled><option value="">Selecione a data</option></select></div></div>
+        <p class="suggestion-note" id="date-suggestion"></p>
+        <p class="field-hint" id="shift-hint">O turno geral da filial pode ser usado em qualquer data operacional.</p>
+        <section id="allocation-editor" aria-label="Distribuição do volume por tanque"></section>
+        <details id="optional-observation" class="preview-books"><summary>Adicionar observação (opcional)</summary>
+          <label for="reason">Observação</label><textarea id="reason" rows="2" maxlength="80" placeholder="Se quiser, acrescente um detalhe sobre o ajuste."></textarea>
+          <p class="field-hint">Até 80 caracteres. O histórico da alteração é registrado automaticamente.</p>
+        </details>
+      </form>
+      <section id="preview-content" aria-live="polite" hidden></section>
+      <button class="button secondary full" id="retry-review" type="button" hidden>Conferir novamente</button>
+    </div>
+    <div class="drawer-footer review-actions"><p id="drawer-state" role="status">Carregando a nota…</p><button class="button primary full" id="apply-button" type="button" disabled>Salvar correção</button><p class="save-hint">Ao salvar, a alteração fica no histórico. Os LMCs afetados ficam para revisão posterior, sem recálculo nesta etapa.</p></div>
+  </dialog>
+  <dialog id="password-dialog" class="session-dialog password-dialog" aria-labelledby="password-title" aria-describedby="password-help">
+    <form id="password-form">
+      <div class="password-heading"><div><p class="eyebrow">MEU ACESSO</p><h2 id="password-title">Trocar senha</h2></div><button id="password-close" type="button" class="icon-button" aria-label="Fechar troca de senha">×</button></div>
+      <p id="password-help">Escolha uma nova senha para <strong id="password-operator"></strong>. Os outros acessos deste operador precisarão entrar novamente.</p>
+      <label for="password-current">Senha atual</label><input id="password-current" name="currentPassword" type="password" autocomplete="current-password" maxlength="256" required>
+      <label for="password-new">Nova senha</label><input id="password-new" name="newPassword" type="password" autocomplete="new-password" minlength="10" maxlength="256" aria-describedby="password-hint" required>
+      <small id="password-hint">No mínimo 10 caracteres.</small>
+      <label for="password-confirm">Confirmar nova senha</label><input id="password-confirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="10" maxlength="256" required>
+      <p id="password-error" role="alert"></p>
+      <div class="password-actions"><button id="password-cancel" class="button secondary" type="button">Cancelar</button><button id="password-submit" class="button primary" type="submit">Salvar nova senha</button></div>
+    </form>
+  </dialog>
+  <dialog id="session-dialog" class="session-dialog" aria-labelledby="session-title">
+    <form id="session-form">
+      <p class="eyebrow">CONTROLE DE COMBUSTÍVEIS</p><h2 id="session-title">Entrar no LMC</h2>
+      <p>Use o acesso fornecido pelo responsável do posto.</p>
+      <label for="session-user">Usuário</label><input id="session-user" autocomplete="username" maxlength="64" required autofocus>
+      <label for="session-password">Senha</label><input id="session-password" type="password" autocomplete="current-password" maxlength="256" required>
+      <p id="session-error" role="alert"></p><button id="session-submit" class="button primary" type="submit">Entrar</button>
+    </form>
+  </dialog>
+</body>
+</html>
