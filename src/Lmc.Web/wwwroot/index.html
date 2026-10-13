@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#122b2a">
+  <meta name="theme-color" content="#193e48">
   <title>Revisão de notas · LMC</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23122b2a'/%3E%3Cpath d='M12 10v20h17v-5H17V10z' fill='%238bddb2'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/workspace.css">
   <script src="/session.js" defer></script>
+  <script src="/sidebar.js" defer></script>
   <script src="/app.js" defer></script>
   <script src="/book-closing.js" defer></script>
   <script src="/book-tank-table.js" defer></script>
@@ -18,20 +20,21 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
-  <aside class="sidebar" aria-label="Navegação principal">
-    <a class="brand" href="/" aria-label="LMC — início"><span class="brand-mark">L</span><span>LMC<span class="brand-sub">CONTROLE DE COMBUSTÍVEIS</span></span></a>
-    <div class="sidebar-label">ROTINA DIÁRIA</div>
+  <aside class="sidebar" id="sidebar" aria-label="Navegação principal">
+    <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="true" title="Retrair menu" aria-label="Retrair menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span>Retrair menu</span></button>
+    <a class="brand" href="/" aria-label="LMC — início"><span class="brand-mark">L</span><span>LMC<span class="brand-sub">Controle de combustíveis</span></span></a>
+    <div class="sidebar-label">Rotina do posto</div>
     <nav>
-      <button class="nav-item active" id="nav-notes" aria-current="page"><span class="nav-icon">01</span>Revisão de notas</button>
-      <button class="nav-item" id="nav-books"><span class="nav-icon">02</span>Conferência do LMC</button>
-      <button class="nav-item" id="nav-pending"><span class="nav-icon">03</span>Pendências do LMC</button>
-      <button class="nav-item" id="nav-tables"><span class="nav-icon">04</span>Tabelas dos tanques</button>
+      <button class="nav-item active" id="nav-notes" aria-current="page"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H5V3h1zm9 0v5h4M8 12h8M8 16h5"/></svg></span>Revisão de notas</button>
+      <button class="nav-item" id="nav-books"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h7l2 2h7v15h-7l-2-2H4V4zm8 2v13M7 8h2M7 12h2m7-2h2m-2 4h2"/></svg></span>Conferência do LMC</button>
+      <button class="nav-item" id="nav-pending"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3zm0 6v5m0 3v1"/></svg></span>Pendências do LMC</button>
+      <button class="nav-item" id="nav-tables"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 9h16M4 15h16M10 9v12"/></svg></span>Tabelas dos tanques</button>
     </nav>
     <div class="sidebar-bottom"><span class="connection-dot"></span><span id="connection">Conectando ao banco…</span><small id="deployment-label">Interface LMC</small></div>
   </aside>
 
   <div class="workspace">
-    <header class="topbar"><div class="breadcrumb">Operação diária <span>/</span> <strong id="breadcrumb-current">Revisão de notas</strong></div><div class="topbar-actions"><div class="branch-control"><span>UNIDADE</span><label class="sr-only" for="branch">Unidade</label><select id="branch" disabled><option>Carregando…</option></select></div><details id="operator-menu" class="operator-menu" hidden><summary><span id="operator-name">Operador</span><span aria-hidden="true">⌄</span></summary><div class="operator-popup"><button id="change-password" type="button">Trocar senha</button><button id="logout" type="button" hidden>Sair</button></div></details></div></header>
+    <header class="topbar"><div class="breadcrumb">Operação diária <span>/</span> <strong id="breadcrumb-current">Revisão de notas</strong></div><div class="topbar-actions"><div class="branch-control"><span>Unidade</span><label class="sr-only" for="branch">Unidade</label><select id="branch" disabled><option>Carregando…</option></select></div><details id="operator-menu" class="operator-menu" hidden><summary><span id="operator-name">Operador</span><span aria-hidden="true">⌄</span></summary><div class="operator-popup"><button id="change-password" type="button">Trocar senha</button><button id="logout" type="button" hidden>Sair</button></div></details></div></header>
     <p id="account-feedback" class="account-feedback" role="status" hidden></p>
     <div class="mobile-navigation"><label for="mobile-view">Menu</label><select id="mobile-view"><option value="notes">Revisão de notas</option><option value="books">Conferência do LMC</option><option value="pending">Pendências do LMC</option><option value="tables">Tabelas dos tanques</option></select></div>
     <main id="main-content" tabindex="-1">
@@ -47,7 +50,7 @@
           <article class="metric"><span>Intervalo prolongado</span><strong id="metric-delayed">—</strong><small id="threshold-caption">5 dias ou mais entre datas</small></article>
           <article class="metric"><span>Data do LMC anterior</span><strong id="metric-earlier">—</strong><small>Anterior à entrada da nota</small></article>
         </div>
-        <div class="notice information"><span class="notice-icon">i</span><div><strong>Encontre a nota mesmo quando a data de entrada estiver errada.</strong><p>A busca inicia no mês anterior e considera qualquer uma das datas da nota. Altere ou limpe o período para consultar outros meses.</p></div></div>
+        <details class="search-help"><summary>Como encontrar notas com a data de entrada errada</summary><p>A busca inicia no mês anterior e considera qualquer uma das datas da nota. Altere ou limpe o período para consultar outros meses.</p></details>
         <section class="panel" aria-label="Lista de notas">
           <form id="filters" class="filters">
             <div class="search-field"><label for="search">Buscar nota</label><input type="search" id="search" placeholder="Número da nota, fornecedor ou produto" maxlength="120" autocomplete="off"></div>
@@ -156,7 +159,7 @@
   </dialog>
   <dialog id="session-dialog" class="session-dialog" aria-labelledby="session-title">
     <form id="session-form">
-      <p class="eyebrow">CONTROLE DE COMBUSTÍVEIS</p><h2 id="session-title">Entrar no LMC</h2>
+      <p class="eyebrow">Controle de combustíveis</p><h2 id="session-title">Entrar no LMC</h2>
       <p>Use o acesso fornecido pelo responsável do posto.</p>
       <label for="session-user">Usuário</label><input id="session-user" autocomplete="username" maxlength="64" required autofocus>
       <label for="session-password">Senha</label><input id="session-password" type="password" autocomplete="current-password" maxlength="256" required>

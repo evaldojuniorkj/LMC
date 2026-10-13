@@ -1,4 +1,14 @@
 # Funções compartilhadas de diagnóstico; este arquivo não executa a instalação.
+function Set-LmcServicePath {
+    param([Parameter(Mandatory=$true)][string]$Path)
+    # Passa o caminho como dado, preservando aspas e espaços no Windows PowerShell 5.1.
+    $target=Get-CimInstance Win32_Service -Filter "Name='LMC'" -ErrorAction Stop
+    if(-not $target){throw 'Serviço LMC não localizado ao atualizar o caminho.'}
+    $result=Invoke-CimMethod -InputObject $target -MethodName Change -Arguments @{PathName=$Path} -ErrorAction Stop
+    if($result.ReturnValue -ne 0){throw "Falha ao atualizar caminho do serviço (Win32_Service.Change, código $($result.ReturnValue))."}
+    $actual=Get-CimInstance Win32_Service -Filter "Name='LMC'" -ErrorAction Stop
+    if($actual.PathName -cne $Path){throw 'O Windows não confirmou o caminho solicitado para o serviço LMC.'}
+}
 function Get-LmcServiceFailure {
     param([datetime]$Since,[string]$Summary)
     try {

@@ -5,7 +5,10 @@ namespace Lmc.Web;
 
 public sealed record DayTank(int ProductId,string Product,short TankId,int? BookId,decimal? Capacity,decimal? LegacyOpening,decimal? LegacyClosing);
 public sealed record DayPump(int ProductId,short PumpId,short? TankId,int BookId,decimal? Opening,decimal? Closing,decimal? Calibration,decimal? Sales);
-public sealed record ArchivePump(short PumpId,short? TankId,int? ProductId,int Events,string FirstAt,string LastAt,decimal? Opening,decimal? Closing,bool Ambiguous);
+public sealed record ArchivePump(short PumpId,short? TankId,int? ProductId,int Events,string FirstAt,string LastAt,decimal? Opening,decimal? Closing,bool Ambiguous)
+{
+    public decimal[] ClosingCandidates {get;init;}=[];
+}
 public sealed record DayReceipt(int Id,int ProductId,short TankId,short DatabaseId,int? DocumentId,int? Number,string Supplier,
     string? DocumentDate,string? EntryDate,string? OperationalDate,string? ParcelDate,decimal? Volume,bool Canceled,bool Usable);
 public sealed record SavedReceipt(int ProductId,int BookId,short TankId,int? Number,decimal? Volume,string? Date);
@@ -144,7 +147,7 @@ public sealed partial class Repository
             await r.NextResultAsync(ct);
             while(await r.ReadAsync(ct)) pumps.Add(new(Value<int>(r,"ProductId"),Value<short>(r,"PumpId"),Optional<short>(r,"TankId"),Value<int>(r,"BookId"),Optional<decimal>(r,"Opening"),Optional<decimal>(r,"Closing"),Optional<decimal>(r,"Calibration"),Optional<decimal>(r,"Sales")));
             await r.NextResultAsync(ct);
-            while(await r.ReadAsync(ct)) archive.Add(new(Value<short>(r,"PumpId"),Optional<short>(r,"TankId"),Optional<int>(r,"ProductId"),Value<int>(r,"Events"),Value<string>(r,"FirstAt"),Value<string>(r,"LastAt"),Optional<decimal>(r,"Opening"),Optional<decimal>(r,"Closing"),Value<bool>(r,"Ambiguous")));
+            while(await r.ReadAsync(ct)) archive.Add(new(Value<short>(r,"PumpId"),Optional<short>(r,"TankId"),Optional<int>(r,"ProductId"),Value<int>(r,"Events"),Value<string>(r,"FirstAt"),Value<string>(r,"LastAt"),Optional<decimal>(r,"Opening"),Optional<decimal>(r,"Closing"),Value<bool>(r,"Ambiguous")){ClosingCandidates=(Text(r,"ClosingCandidates")??"").Split(',',StringSplitOptions.RemoveEmptyEntries).Select(x=>decimal.Parse(x,System.Globalization.CultureInfo.InvariantCulture)).Distinct().Order().ToArray()});
             await r.NextResultAsync(ct);
             while(await r.ReadAsync(ct)) receipts.Add(new(Value<int>(r,"Id"),Value<int>(r,"ProductId"),Value<short>(r,"TankId"),Value<short>(r,"DatabaseId"),Optional<int>(r,"DocumentId"),Optional<int>(r,"Number"),Value<string>(r,"Supplier"),Text(r,"DocumentDate"),Text(r,"EntryDate"),Text(r,"OperationalDate"),Text(r,"ParcelDate"),Optional<decimal>(r,"Volume"),Value<bool>(r,"Canceled"),Value<bool>(r,"Usable")));
             await r.NextResultAsync(ct);

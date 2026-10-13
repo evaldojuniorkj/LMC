@@ -44,7 +44,9 @@ WITH events AS (
 )
 SELECT a.ID_BICOS PumpId,b.ID_TANQUES TankId,t.ID_PRODUTOS ProductId,a.Events,
  CONVERT(varchar(19),a.FirstAt,126) FirstAt,CONVERT(varchar(19),a.LastAt,126) LastAt,
- CONVERT(decimal(19,4),a.Opening) Opening,CONVERT(decimal(19,4),a.Closing) Closing,CONVERT(bit,a.Ambiguous) Ambiguous
+ CONVERT(decimal(19,4),a.Opening) Opening,CONVERT(decimal(19,4),a.Closing) Closing,CONVERT(bit,a.Ambiguous) Ambiguous,
+ STUFF((SELECT DISTINCT ','+CONVERT(varchar(40),CONVERT(decimal(19,4),e.ENCERRANTE)) FROM events e
+ WHERE e.ID_BICOS=a.ID_BICOS AND e.LastRank=1 AND e.ENCERRANTE IS NOT NULL FOR XML PATH('')),1,1,'') ClosingCandidates
 FROM archive a LEFT JOIN dbo.BICOS b ON b.ID_FILIAL=@branch AND b.ID_BICOS=a.ID_BICOS
 LEFT JOIN dbo.TANQUES t ON t.ID_FILIAL=@branch AND t.ID_TANQUES=b.ID_TANQUES
 ORDER BY a.ID_BICOS;

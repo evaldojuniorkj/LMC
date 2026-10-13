@@ -13,7 +13,11 @@ public sealed record StoredTank(int Id,int BookId,short TankId,decimal? Opening,
 public sealed record StoredReceipt(int Id,int BookId,short TankId,int? Number,decimal? Volume,string? DocumentDate,string? SupplierTaxId);
 public sealed record PumpMapping(short PumpId,short TankId,bool TankActive,string? ActivatedAt);
 public sealed record ShiftCounter(int Id,short PumpId,int ShiftId,int ShiftNumber,decimal? Opening,decimal? Closing,decimal? Calibration,decimal? Price);
-public sealed record BookPumpCutoff(decimal AutomationOpening,decimal AutomationClosing,decimal ShiftOpening,decimal ShiftClosing,string FirstAt,string LastAt);
+public sealed record BookPumpCutoff(decimal AutomationOpening,decimal AutomationClosing,decimal ShiftOpening,decimal ShiftClosing,string FirstAt,string LastAt)
+{
+    public bool AutomationAmbiguous {get;init;}
+    public decimal[] AutomationCandidates {get;init;}=[];
+}
 public sealed record BookPump(short PumpId,short TankId,decimal Opening,decimal Closing,decimal Calibration,decimal Price,decimal Sales,string Source)
 {
     public BookPumpCutoff? Cutoff {get;init;}
@@ -99,6 +103,9 @@ public static class BookWriting
             var opening=b.Opening;
             if(b.Cutoff is not null)
             {
+                if(b.Cutoff.AutomationAmbiguous && edited.CounterSource=="automation" &&
+                    (!edited.Closing.HasValue || !b.Cutoff.AutomationCandidates.Contains(edited.Closing.Value)))
+                    blockers.Add($"Bico {b.PumpId}: escolha um dos fechamentos registrados pela automação.");
                 if(edited.CounterSource is not ("automation" or "shifts"))
                     blockers.Add($"Bico {b.PumpId}: confira a diferença entre automação e turnos e escolha o encerrante de fechamento.");
             }
@@ -504,6 +511,12 @@ public sealed partial class Repository
                 && turns.Zip(turns.Skip(1)).All(x=>!LmcConference.Differs(x.First.Closing,x.Second.Opening)))
             {
                 calibration=turns.Sum(x=>x.Calibration!.Value);price=turns[0].Price;
+                if(a is {Ambiguous:true} && inheritsOpening)
+                {
+                    closing=turns[^1].Closing;
+                    cutoff=new(a.Opening??opening!.Value,a.Closing??closing!.Value,turns[0].Opening!.Value,closing!.Value,a.FirstAt,a.LastAt){AutomationAmbiguous=true,AutomationCandidates=a.ClosingCandidates};
+                    warnings.Add($"Bico {map.PumpId}: a automação possui encerrantes conflitantes. Escolha o fechamento da automação ou dos turnos para continuar; a abertura permanece a do LMC anterior.");
+                }
                 if(a is {Ambiguous:false,Opening:not null,Closing:not null} && LmcConference.Differs(closing,turns[^1].Closing))
                     cutoff=new(a.Opening.Value,a.Closing.Value,turns[0].Opening!.Value,turns[^1].Closing!.Value,a.FirstAt,a.LastAt);
                 if(LmcConference.Differs(opening,turns[0].Opening))
@@ -515,7 +528,7 @@ public sealed partial class Repository
                 if(prior.Length==1&&prior[0].Closing is >=0 and <=1000000000&&!LmcConference.Differs(prior[0].Closing,turns[0].Opening))
                 {opening=closing=prior[0].Closing;source="Turnos sem movimento, conferidos com o fechamento anterior";}
             }
-            if(old is null && a?.Ambiguous==true || opening is null || closing is null || closing<opening || calibration is null || calibration<0
+            if(old is null && a?.Ambiguous==true && cutoff?.AutomationAmbiguous!=true || opening is null || closing is null || closing<opening || calibration is null || calibration<0
                 || price is null || price<=0 || closing-opening-calibration<0)
             {blockers.Add($"Bico {map.PumpId}: faltam encerrantes, aferição ou preço confiáveis para gravar.");continue;}
             pumps.Add(new(map.PumpId,map.TankId,opening.Value,closing.Value,calibration.Value,price.Value,closing.Value-opening.Value-calibration.Value,source){Cutoff=cutoff,OpeningSource=openingSource,SavedOpening=old?.Opening});

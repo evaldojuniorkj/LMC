@@ -32,7 +32,7 @@ public sealed record SetupDefaults(SetupOptions Options,string[] SqlServers)
         var sql=running.FirstOrDefault(i=>i.Address=="localhost")?.Address
             ??(running.Length==1?running[0].Address:instances.FirstOrDefault(i=>i.Address=="localhost")?.Address)
             ??(instances.Length==1?instances[0].Address:"localhost");
-        var password=NewOperatorPassword();
+        var password="pfncriwnkx";
         var options=new SetupOptions(sql,"sa","",true,addresses.FirstOrDefault()??Environment.MachineName,
             "operador",password,password,5443,true,true);
         return new(options,new[]{sql}.Concat(instances.Select(i=>i.Address).Order()).Append("localhost").Distinct(StringComparer.OrdinalIgnoreCase).ToArray());

@@ -23,6 +23,13 @@ static class BookPumpChecks
             check(!BookWriting.Preview(divergent,input with {Pumps=missing}).CanSave,"diferença de corte exige origem explícita também no servidor");
         var automation=input with {Pumps=[new(1,2000,0,"automation")],Tanks=[new(1,10000,9000)]};
         var shifts=input with {Pumps=[new(1,2020,0,"shifts")],Tanks=[new(1,10000,8980)]};
+        var ambiguous=divergent with {Pumps=[divergent.Pumps[0] with {Cutoff=cutoff with {AutomationAmbiguous=true}}]};
+        check(!BookWriting.Preview(ambiguous,automation).CanSave,"automação ambígua não pode ser confirmada como fonte");
+        var candidates=ambiguous with {Pumps=[ambiguous.Pumps[0] with {Cutoff=cutoff with {AutomationAmbiguous=true,AutomationCandidates=[2000,2001]}}]};
+        check(BookWriting.Preview(candidates,automation).CanSave,"automação permite escolha explícita de um fechamento registrado");
+        check(!BookWriting.Preview(candidates,automation with {Pumps=[new(1,2002,0,"automation")]}).CanSave,"automação conflitante rejeita fechamento fora dos candidatos");
+        check(BookWriting.Preview(ambiguous,shifts).CanSave,"turno confirmado libera automação ambígua mantendo abertura fixa");
+        check(!BookWriting.Preview(ambiguous,shifts with {Pumps=[new(1,2020,0)]}).CanSave,"automação ambígua exige confirmação explícita do turno");
         check(BookWriting.Preview(divergent,automation) is {CanSave:true,Balance.Sales:1000},"confirmar automação permite continuar com seus encerrantes");
         check(BookWriting.Preview(divergent,shifts) is {CanSave:true,Balance.Sales:1020,SalesValue:7140},"escolher fechamento dos turnos conserva a abertura fixa e recalcula vendas e valor");
         foreach(var choice in new[]{"automation","shifts"})

@@ -27,10 +27,11 @@ if($LASTEXITCODE -ne 0){throw 'O certificado HTTPS não pôde ser preparado. O s
 $previous=$service.PathName
 Stop-Service LMC
 $serviceStarted=Get-Date
+$startAttempted=$false
 try{
-    & sc.exe config LMC binPath= ('"'+$exe+'" --ProtectedConfig "'+$config+'"') | Out-Null
-    if($LASTEXITCODE -ne 0){throw 'Falha ao atualizar caminho do serviço.'}
+    Set-LmcServicePath -Path ('"'+$exe+'" --ProtectedConfig "'+$config+'"')
     Get-NetFirewallRule -DisplayName 'LMC HTTPS - Rede local' | Get-NetFirewallApplicationFilter | Set-NetFirewallApplicationFilter -Program $exe
+    $startAttempted=$true
     Start-Service LMC;(Get-Service LMC).WaitForStatus('Running',[TimeSpan]::FromSeconds(30))
     $listening=$false
     for($attempt=0;$attempt -lt 20;$attempt++){
@@ -45,10 +46,16 @@ try{
     Set-Content -LiteralPath (Join-Path $env:ProgramData 'LMC\previous-service-path.txt') -Value $previous
     Write-Host 'Atualização concluída. Versão anterior preservada no disco.'
 }catch{
-    $failure=Get-LmcServiceFailure -Since $serviceStarted -Summary $_.Exception.Message
-    Stop-Service LMC -ErrorAction SilentlyContinue
-    & sc.exe config LMC binPath= $previous | Out-Null
-    if($previous -match '^"([^"]+)"'){Get-NetFirewallRule -DisplayName 'LMC HTTPS - Rede local' | Get-NetFirewallApplicationFilter | Set-NetFirewallApplicationFilter -Program $matches[1]}
-    Start-Service LMC
+    $failure=$_.Exception.Message
+    if($startAttempted){$failure=Get-LmcServiceFailure -Since $serviceStarted -Summary $failure}
+    try {
+        Stop-Service LMC -ErrorAction SilentlyContinue
+        Set-LmcServicePath -Path $previous
+        if($previous -match '^"([^"]+)"'){Get-NetFirewallRule -DisplayName 'LMC HTTPS - Rede local' | Get-NetFirewallApplicationFilter | Set-NetFirewallApplicationFilter -Program $matches[1]}
+        Start-Service LMC
+        $failure+=[Environment]::NewLine+'Caminho anterior restaurado e serviço anterior iniciado.'
+    } catch {
+        $failure+=[Environment]::NewLine+'A restauração do serviço anterior também falhou: '+$_.Exception.Message
+    }
     throw $failure
 }
